@@ -1,0 +1,136 @@
+PRODUCT INVENTORY
+MANAGEMENT SYSTEM OUR TEAM
+CONTINUE
+1.MATHANKUMAR
+2.JAHEER
+3.PRASATH
+4.CHANDRU
+5.MADHANKUMAR
+(C) INTRODUCTION
+A Product Inventory Management System is a software application
+developed using Python to manage and track product stock in a store or
+warehouse. The system allows users to add products, update stock,
+remove products, and view inventory details.The main
+goal of this system is to simplify inventory
+tracking and reduce manual errors. OBJECTIVES
+To maintain product records efficiently
+To track product quantity in stock
+To add,update,and delete products
+To reduce manual inventory management
+.
+.
+.
+. SYSTEM REQUIREMENTS
+HARDWARD REQUIREMENTS
+Computer/Laptop
+10 GB free srorage
+Minimum 4 GB RAM
+SOFTWARE REQUIREMENTS
+Python 3.x
+code editor (such as Visual Studio Code,
+Pycharm,or IDLE (Python)),
+.
+.
+.
+.
+. MODULES OFTHE SYSTEM
+1.Product Management Module
+Add new products
+Update product details
+Delete products
+2. Inventory Management Module
+3.Display Module
+4.Error Handling Module
+This module handeles :
+Stock quantity tracking
+Updating stock after sales or
+purchases
+This module shows the list of
+products available in
+inventory.
+Handles incorrect inputs using python
+exception handling.
+.
+.
+.
+.
+. SYSTEM WORK FLOW
+BUSINESS
+SALES
+BUSINESS
+85% SALES
+User runs the python program
+Menu options appear
+User selects an operation:
+Add Product
+Update Stock
+Delete Product
+View inventory
+System updates inventory data results are displayed to the user
+.
+.
+.
+.
+.
+.
+.
+. PYTHON CODE
+inventory = {}
+def add_product():
+pid = input("Enter Product ID: ")
+name = input("Enter Product Name: ")
+price = float(input("Enter Price: "))
+quantity = int(input("Enter Quantity: "))
+inventory[pid] = {
+"name": name,
+"price": price,
+"quantity": quantity
+}
+def display_inventory():
+print("\nInventory List")
+for pid, details in inventory.items():
+print(pid, details["name"], details["price"], details["quantity"])
+while True:
+print("\n1.Add Product")
+print("2.Display Inventory")
+print("3.Exit")
+choice = input("Enter choice: ")
+if choice == "1":
+add_product()
+elif choice == "2":
+display_inventory()
+elif choice == "3":
+break ADVANTAGES
+Easay inventory tracking
+Reduces human errors
+Simple to use
+Fast product updates
+.
+.
+.
+. LIMITATIONS
+Work locally only
+No database integration in the basic version
+No graphical user interface
+.
+.
+. FUTURE ENHANCEMENTS
+Add database support (My Sql/SQLite)
+Develop GUI using Python libraries
+Add barcode scanning
+Add sales and purchase reports
+.
+.
+.
+. CONCLUSION
+The Product Inventory Management System developed using Python is
+designed to help manage and track product information efficiently. The
+system allows users to add new products, update stock quantities, delete
+products, and view the current inventory. This helps maintain accurate
+records and reduces the chances of errors that may occur in manual
+inventory management.
+Overall, the project demonstrates how Python can be used to build a simple
+and effective system for managing inventory. It improves organization, saves
+time, and can be further enhanced by adding features such as a database,
+graphical user interface, and advanced reporting tools 
+THANK YOU
