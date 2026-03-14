@@ -1,0 +1,193 @@
+from fastapi import FastAPI, Depends, HTTPException
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, EmailStr
+from typing import List
+from datetime import datetime
+import jwt
+from jwt.exceptions import PyJWTError
+from passlib.context import CryptContext
+import motor.motor_asyncio
+from bson import ObjectId
+
+# CONFIG
+SECRET_KEY = "super-secret-key"
+ALGORITHM = "HS256"
+MONGO_URI = "mongodb://localhost:27017"
+
+# APP
+app = FastAPI(title="Product Inventory API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# DATABASE
+client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_URI)
+db = client.inventory_db
+
+# SECURITY
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+security = HTTPBearer()
+
+# MODELS
+class UserCreate(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+class ProductCreate(BaseModel):
+    name: str
+    price: float
+    quantity: int
+    description: str
+
+class Product(ProductCreate):
+    id: str
+    userId: str
+    createdAt: datetime
+    updatedAt: datetime
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+# PASSWORD FUNCTIONS
+def hash_password(password):
+    return pwd_context.hash(password)
+
+def verify_password(password, hashed):
+    return pwd_context.verify(password, hashed)
+
+# TOKEN
+def create_token(user_id):
+    return jwt.encode({"sub": user_id}, SECRET_KEY, algorithm=ALGORITHM)
+
+# GET CURRENT USER
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+
+        user = await db.users.find_one({"_id": ObjectId(user_id)})
+
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid token")
+
+        return user
+
+    except PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+# REGISTER
+@app.post("/api/v1/auth/register")
+async def register(user: UserCreate):
+
+    existing = await db.users.find_one({"email": user.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already exists")
+
+    result = await db.users.insert_one({
+        "name": user.name,
+        "email": user.email,
+        "password": hash_password(user.password),
+        "createdAt": datetime.utcnow(),
+        "updatedAt": datetime.utcnow()
+    })
+
+    return {"id": str(result.inserted_id), "message": "User created"}
+
+# LOGIN
+@app.post("/api/v1/auth/login", response_model=Token)
+async def login(data: UserLogin):
+
+    user = await db.users.find_one({"email": data.email})
+
+    if not user or not verify_password(data.password, user["password"]):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    token = create_token(str(user["_id"]))
+
+    return {"access_token": token, "token_type": "bearer"}
+
+# CREATE PRODUCT
+@app.post("/api/v1/products/")
+async def create_product(product: ProductCreate, user=Depends(get_current_user)):
+
+    doc = product.dict()
+    doc["userId"] = str(user["_id"])
+    doc["createdAt"] = datetime.utcnow()
+    doc["updatedAt"] = datetime.utcnow()
+
+    result = await db.products.insert_one(doc)
+
+    doc["id"] = str(result.inserted_id)
+
+    return doc
+
+# GET PRODUCTS
+@app.get("/api/v1/products/", response_model=List[dict])
+async def get_products(user=Depends(get_current_user)):
+
+    products = []
+
+    cursor = db.products.find({"userId": str(user["_id"])})
+
+    async for p in cursor:
+        p["id"] = str(p["_id"])
+        products.append(p)
+
+    return products
+
+# UPDATE PRODUCT
+@app.put("/api/v1/products/{pid}")
+async def update_product(pid: str, product: ProductCreate, user=Depends(get_current_user)):
+
+    if not ObjectId.is_valid(pid):
+        raise HTTPException(status_code=400, detail="Invalid ID")
+
+    result = await db.products.find_one_and_update(
+        {"_id": ObjectId(pid), "userId": str(user["_id"])},
+        {"$set": {**product.dict(), "updatedAt": datetime.utcnow()}},
+    )
+
+    if not result:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    return {"message": "Product updated"}
+
+# DELETE PRODUCT
+@app.delete("/api/v1/products/{pid}")
+async def delete_product(pid: str, user=Depends(get_current_user)):
+
+    result = await db.products.delete_one(
+        {"_id": ObjectId(pid), "userId": str(user["_id"])}
+    )
+
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    return {"message": "Product deleted"}
+
+# ROOT
+@app.get("/")
+async def root():
+    return {"message": "Product Inventory API running"}
+
+# from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/")
+def home():
+    return {"message": "API working successfully"}
